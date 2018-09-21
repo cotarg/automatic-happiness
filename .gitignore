@@ -10,3 +10,7 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Because I'm on a Mac
+.DS_Store
+thumbs.db
