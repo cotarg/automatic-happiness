@@ -1,6 +1,5 @@
-# automatic-happiness
-a toy app in golang to explore museums
+Interface for each museum:
 
-starting with:
 * https://www.vam.ac.uk/api/
 * https://www.brooklynmuseum.org/api/new-documentation/
+
