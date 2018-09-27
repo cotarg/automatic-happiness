@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -8,13 +9,13 @@ import (
 	"time"
 )
 
-type Object struct {
+type MuseumObject struct {
 	ID                        string
 	Title                     string
 	Creator                   string
 	Collection                string
 	Completion                time.Time
-	ColonialAppropriationDate time.Time
+	ColonialAppropriationDate string
 }
 
 type Connector interface {
@@ -24,7 +25,53 @@ type Connector interface {
 
 type VAMConnector struct{}
 
-func (c Connector) Fetch() ([]byte, error) {
+type VAMObjAPIResp struct {
+	Records []struct {
+		Fields struct {
+			PrimaryImageID    string `json:"primary_image_id"`
+			MuseumNumber      string `json:"museum_number"`
+			Artist            string `json:"artist"`
+			CollectionCode    string `json:"collection_code"`
+			Location          string `json:"location"`
+			DateText          string `json:"date_text"`
+			MuseumNumberToken string `json:"museum_number_token"`
+			Object            string `json:"object"`
+			Longitude         string `json:"longitude"`
+			ObjectNumber      string `json:"object_number"`
+			Slug              string `json:"slug"`
+			Latitude          string `json:"latitude"`
+			Title             string `json:"title"`
+			Place             string `json:"place"`
+		} `json:"fields"`
+		Pk    int    `json:"pk"`
+		Model string `json:"model"`
+	} `json:"records"`
+	Meta struct {
+		ResultCount int `json:"result_count"`
+	} `json:"meta"`
+}
+
+func (c VAMConnector) Translate(body []byte) ([]Object, error) {
+	objFromMuseum := &VAMObjAPIResp{}
+	if err := json.Unmarshal(body, objFromMuseum); err != nil {
+		return nil, fmt.Errorf("i can't do that Dave: %v", err)
+	}
+
+	museumObjects := make([]MuseumObject, 0)
+
+	for _, obj := range objFromMuseum {
+		museumObjects = append(museumObjects, MuseumObject{
+			ID:                        obj.Fields.MuseumNumber,
+			Title:                     obj.Fields.Title,
+			Creator:                   obj.Fields.Artist,
+			Collection:                obj.Fields.CollectionCode,
+			ColonialAppropriationDate: obj.Fields.DateText,
+		})
+	}
+	return museumObjects, nil
+}
+
+func (c VAMConnector) Fetch() ([]byte, error) {
 	// V&A museum API Docs: https://www.vam.ac.uk/api/
 	vickyMuseumURL := "https://www.vam.ac.uk/api/json/museumobject/"
 
@@ -41,8 +88,6 @@ func (c Connector) Fetch() ([]byte, error) {
 
 	return body, nil
 }
-
-func (c Connector) Translate([]byte) ([]Object, error)
 
 func main() {
 	http.HandleFunc("/objects", func(w http.ResponseWriter, r *http.Request) {
