@@ -17,8 +17,35 @@ type Object struct {
 	ColonialAppropriationDate time.Time
 }
 
+type Connector interface {
+	Fetch() ([]byte, error)
+	Translate([]byte) ([]Object, error)
+}
+
+type VAMConnector struct{}
+
+func (c Connector) Fetch() ([]byte, error) {
+	// V&A museum API Docs: https://www.vam.ac.uk/api/
+	vickyMuseumURL := "https://www.vam.ac.uk/api/json/museumobject/"
+
+	resp, err := http.Get(vickyMuseumURL)
+	if err != nil {
+		return nil, fmt.Errorf("argh this is bad, NO INFO b/c: %v", err)
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("can't give you your info b/c: %v", err)
+	}
+
+	return body, nil
+}
+
+func (c Connector) Translate([]byte) ([]Object, error)
+
 func main() {
-	http.HandleFunc("/bar", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/objects", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, museumObjectQuery())
 	})
 
